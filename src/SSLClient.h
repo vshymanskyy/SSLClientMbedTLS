@@ -1,16 +1,20 @@
 /*
   SSLClient.h - Base class that provides Client SSL to ESP32
-  Additions (c) 2011 Adrian McEwen.  All right reserved.
+  Copyright (c) 2011 Adrian McEwen.  All right reserved.
   Additions Copyright (C) 2017 Evandro Luis Copercini.
   Additions Copyright (C) 2019 Vadim Govorovski.
+  Additions Copyright (C) 2022 Volodymyr Shymanskyy.
+
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
+
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
+
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
@@ -20,29 +24,31 @@
 #define SSLClient_H
 #include "Arduino.h"
 #include "IPAddress.h"
-#include "ssl_client.h"
+#include "WiFi.h"
+#include "ssl_client_new.h"
 
 class SSLClient : public Client
 {
 protected:
-    sslclient_context *sslclient;
+    SSLWrapper::sslclient_context *sslclient;
  
     int _lastError = 0;
-	int _peek = -1;
-    int _timeout = 0;
+    int _peek = -1;
+    int _timeout;
+    bool _use_insecure;
     const char *_CA_cert;
     const char *_cert;
     const char *_private_key;
     const char *_pskIdent; // identity for PSK cipher suites
     const char *_psKey; // key in hex for PSK cipher suites
+    const char **_alpn_protos;
 
     bool _connected = false;
-
-    Client* _client = nullptr;
 
 public:
     SSLClient();
     SSLClient(Client* client);
+    SSLClient(Client& client);
     ~SSLClient();
 
     int connect(IPAddress ip, uint16_t port);
@@ -53,8 +59,7 @@ public:
     int connect(const char *host, uint16_t port, const char *rootCABuff, const char *cli_cert, const char *cli_key);
     int connect(IPAddress ip, uint16_t port, const char *pskIdent, const char *psKey);
     int connect(const char *host, uint16_t port, const char *pskIdent, const char *psKey);
-
-	int peek();
+    int peek();
     size_t write(uint8_t data);
     size_t write(const uint8_t *buf, size_t size);
     int available();
@@ -64,7 +69,7 @@ public:
     void stop();
     uint8_t connected();
     int lastError(char *buf, const size_t size);
-
+    void setInsecure(); // Don't validate the chain, just accept whatever is given.  VERY INSECURE!
     void setPreSharedKey(const char *pskIdent, const char *psKey); // psKey in Hex
     void setCACert(const char *rootCA);
     void setCertificate(const char *client_ca);
@@ -74,7 +79,8 @@ public:
     bool loadPrivateKey(Stream& stream, size_t size);
     bool verify(const char* fingerprint, const char* domain_name);
     void setHandshakeTimeout(unsigned long handshake_timeout);
-
+    void setAlpnProtocols(const char **alpn_protos);
+    bool getFingerprintSHA256(uint8_t sha256_result[32]) { return get_peer_fingerprint(sslclient, sha256_result); };
     int setTimeout(uint32_t seconds){ return 0; }
 
     operator bool()
@@ -93,7 +99,6 @@ public:
 private:
     char *_streamLoad(Stream& stream, size_t size);
 
-    //friend class GprsServer;
     using Print::write;
 };
 
