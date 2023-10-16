@@ -44,7 +44,7 @@ int client_net_recv_timeout( void *ctx, unsigned char *buf,
     
     if (!result) return MBEDTLS_ERR_SSL_WANT_READ;
 
-    log_v("SSL client RX (received=%d expected=%d in %dms)", result, len, millis()-start);
+    log_v("SSL client RX (received=%d expected=%d)", result, len);
 
     return result;
 }
